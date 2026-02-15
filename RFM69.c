@@ -39,13 +39,12 @@ static volatile uint8_t targetID;                // should match _address
 static volatile uint8_t payloadLen;
 static volatile uint8_t ACK_Requested;
 static volatile uint8_t ACK_RECEIVED;           // should be polled immediately after sending a packet with ACK request
-static volatile uint8_t _mode;
+static volatile uint8_t _mode = RF69_MODE_STANDBY;
 static volatile int16_t rssi;                   // most accurate RSSI during reception (closest to the reception)
 
 static uint8_t _address;
 static uint8_t _powerLevel = 31;
 bool _promiscuousMode = false;
-uint8_t _mode = RF69_MODE_STANDBY;
 
 // used function prototypes
 void RFM69_writeReg(uint8_t addr, uint8_t val);
@@ -75,6 +74,8 @@ void RFM69_rcCalibration(void); // calibrate the internal RC oscillator for use 
 void RFM69_encrypt(const char* key);
 int16_t RFM69_readRSSI(bool forceTrigger); 
 void RFM69_select(void);
+void RFM69_setMode(uint8_t newMode);
+void RFM69_setHighPower(bool onOff);
 
 // extern functions
 void noInterrupts();                // function to disable interrupts
@@ -135,7 +136,7 @@ bool RFM69_initialize(uint8_t freqBand, uint8_t nodeID, uint16_t networkID)
   };
   uint8_t i;
   
-  RFM69_SetCSPin(HIGH);
+  RFM69_SetCSPin(true);
   /*Timeout_SetTimeout1(50);
   do
   {
@@ -157,7 +158,7 @@ bool RFM69_initialize(uint8_t freqBand, uint8_t nodeID, uint16_t networkID)
 
   // Encryption is persistent between resets and can trip you up during debugging.
   // Disable it during initialization so we always start from a known state.
-  encrypt(0);
+  RFM69_encrypt(0);
 
   RFM69_setHighPower(ISRFM69HW); // called regardless if it's a RFM69W or RFM69HW
   RFM69_setMode(RF69_MODE_STANDBY);
@@ -267,7 +268,7 @@ void RFM69_setPowerLevel(uint8_t powerLevel)
 
 bool RFM69_canSend()
 {
-  if (_mode == RF69_MODE_RX && payloadLen == 0 && RFM69_readRSSI() < CSMA_LIMIT) // if signal stronger than -100dBm is detected assume channel activity
+  if (_mode == RF69_MODE_RX && payloadLen == 0 && RFM69_readRSSI(false) < CSMA_LIMIT) // if signal stronger than -100dBm is detected assume channel activity
   {
     RFM69_setMode(RF69_MODE_STANDBY);
     return true;
@@ -369,7 +370,7 @@ static void RFM69_sendFrame(uint8_t toAddress, const void* buffer, uint8_t buffe
   // no need to wait for transmit mode to be ready since its handled by the radio
   RFM69_setMode(RF69_MODE_TX);
   Timeout_SetTimeout1(RF69_TX_LIMIT_MS);
-  while (RFM69_ReadDIO0Pin()) == 0 && !Timeout_IsTimeout1()); // wait for DIO0 to turn HIGH signalling transmission finish
+  while (RFM69_ReadDIO0Pin() == 0 && !Timeout_IsTimeout1()); // wait for DIO0 to turn HIGH signalling transmission finish
   //while (RFM69_readReg(REG_IRQFLAGS2) & RF_IRQFLAGS2_PACKETSENT == 0x00); // wait for ModeReady
   RFM69_setMode(RF69_MODE_STANDBY);
 }
@@ -413,7 +414,7 @@ void RFM69_interruptHandler() {
     RFM69_unselect();
     RFM69_setMode(RF69_MODE_RX);
   }
-  rssi = RFM69_readRSSI();
+  rssi = RFM69_readRSSI(false);
 }
 
 // internal function
@@ -528,7 +529,7 @@ void RFM69_readAllRegs()
 #endif
   char pcBuf[16];
   
-  Serial.println("Address - HEX");
+  Serialprint("Address - HEX");
   for (uint8_t regAddr = 1; regAddr <= 0x4F; regAddr++)
   {
     RFM69_select();
@@ -536,10 +537,10 @@ void RFM69_readAllRegs()
     regVal = SPI_transfer8(0);
     RFM69_unselect();
 
-    usprintf(pcBuf, "%0X",regAddr);
+    printf(pcBuf, "%0X",regAddr);
     Serialprint(pcBuf);  //hex
     Serialprint(" - ");
-    usprintf(pcBuf, "%02X",regVal);
+    printf(pcBuf, "%02X",regVal);
     Serialprint(pcBuf);   //hex
 
 #if REGISTER_DETAIL 
@@ -817,12 +818,12 @@ void RFM69_writeReg(uint8_t addr, uint8_t value)
 void RFM69_select() 
 {
   noInterrupts();
-  RFM69_SetCSPin(LOW);
+  RFM69_SetCSPin(false);
 }
 
 // unselect the RFM69 transceiver (set CS high, restore SPI settings)
 void RFM69_unselect() 
 {
-  RFM69_SetCSPin(HIGH);
+  RFM69_SetCSPin(true);
   interrupts();
 }
