@@ -1,9 +1,12 @@
 # RFM69
-RFM69 C library port attempt from this arduino library: https://github.com/LowPowerLab/RFM69
+
+RFM69 C library port attempt from this arduino library: <https://github.com/LowPowerLab/RFM69>
 Supports RFM69W, RFM69HW, RFM69CW, RFM69HCW (semtech SX1231, SX1231H)
 
-### To be able to use this library: 
-####Please define in your project these platform specific functions defined as extern in RFM69.h:
+## To be able to use this library
+
+### Please define in your project these platform specific functions defined as extern in RFM69.h
+
 - `extern void noInterrupts();`             function to disable interrupts
 - `extern void interrupts();`               function to enable interrupts  
 - `extern void RFM69_SetCSPin(bool);`       function to control the GPIO connected to RFM69 chip select (HIGH or LOW)
@@ -13,6 +16,12 @@ Supports RFM69W, RFM69HW, RFM69CW, RFM69HCW (semtech SX1231, SX1231H)
 - `extern bool Timeout_IsTimeout1(void);`   function for timeout handling, checks if previously set timeout expired
 - `extern void Timeout_SetTimeout1(uint16_t);` function for timeout handling, sets a timeout, parameter is in milliseconds (ms)
 
-####Configure SPI before using library functions
+### Configure SPI before using library functions
+
 - set SPI CPOL= 0 and CPHA = 0 ( in Motorola/Freescale nomenclature), MSB first
 - maximum 10MHz SCK clock according to RFM69 datasheet
+
+### Configure the "PAYLOADREADY" Interrupt
+
+- Configure a rising edge interrupt on DIO0 Pin
+- Call `void RFM69_isr0()` in the call back for the interrupt
