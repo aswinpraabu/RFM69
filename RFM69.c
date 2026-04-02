@@ -419,7 +419,6 @@ bool RFM69_receiveDone()
   	RFM69_interruptHandler();
   }
 //ATOMIC_BLOCK(ATOMIC_FORCEON)
-  noInterrupts(); // re-enabled in RFM69_unselect() via setMode() or via RFM69_receiveBegin()
   if (_mode == RF69_MODE_RX && payloadLen > 0)
   {
     RFM69_setMode(RF69_MODE_STANDBY); // enables interrupts
@@ -427,7 +426,6 @@ bool RFM69_receiveDone()
   }
   else if (_mode == RF69_MODE_RX) // already in RX no payload yet
   {
-    interrupts(); // explicitly re-enable interrupts
     return false;
   }
   RFM69_receiveBegin();
