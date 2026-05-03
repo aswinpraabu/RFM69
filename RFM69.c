@@ -36,6 +36,7 @@ static volatile uint8_t data[RF69_MAX_DATA_LEN]; // recv/xmit buf, including hea
 static volatile uint8_t datalen;
 static volatile uint8_t senderID;
 static volatile uint8_t targetID;                // should match _address
+static volatile uint8_t headerFlags;                
 static volatile uint8_t payloadLen;
 static volatile uint8_t ACK_Requested;
 static volatile uint8_t ACK_RECEIVED;           // should be polled immediately after sending a packet with ACK request
@@ -373,6 +374,7 @@ void RFM69_interruptHandler() {
     datalen = payloadLen - 3;
     senderID = SPI_transfer8(0);
     CTLbyte = SPI_transfer8(0);
+    headerFlags = SPI_transfer8(0);
 
     ACK_RECEIVED = CTLbyte & RFM69_CTL_SENDACK; // extract ACK-received flag
     ACK_Requested = CTLbyte & RFM69_CTL_REQACK; // extract ACK-requested flag
